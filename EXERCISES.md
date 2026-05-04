@@ -83,7 +83,23 @@ This one is **experimental**. It can break. That's the point.
 
 The exercise: three agents with different architectural priors debate a tiny design problem and have to produce a single recommendation.
 
-Steps:
+### The fast path (one command)
+
+```bash
+./scripts/demo3-debate.sh
+```
+
+Creates three worktrees on dedicated branches, opens a tmux session named `debate` with three panes, launches Claude in each, and pre-loads each pane with its persona. When tmux attaches, wait for the three agents to acknowledge their roles, then paste the kickoff prompt printed by the script into any pane.
+
+When you're done:
+
+```bash
+./scripts/demo3-debate.sh --cleanup
+```
+
+Kills the tmux session, removes the worktrees, deletes the branches.
+
+### The manual path (if you want to see every step)
 
 1. From a fresh terminal:
 
@@ -96,13 +112,13 @@ Steps:
 
    ```bash
    # pane 1 — minimalist
-   git worktree add ../talkhub-min minimalist && cd ../talkhub-min && claude
+   git worktree add ../talkhub-minimalist debate-minimalist && cd ../talkhub-minimalist && claude
 
    # pane 2 — defensive coder
-   git worktree add ../talkhub-def defensive && cd ../talkhub-def && claude
+   git worktree add ../talkhub-defensive debate-defensive && cd ../talkhub-defensive && claude
 
    # pane 3 — performance hawk
-   git worktree add ../talkhub-perf perf && cd ../talkhub-perf && claude
+   git worktree add ../talkhub-perf debate-perf && cd ../talkhub-perf && claude
    ```
 
 4. In each pane, set the persona before starting the debate:
@@ -111,7 +127,7 @@ Steps:
    - Pane 2 (defensive): *"You are a defensive coder. You believe handling every edge case up front is always right. Silent bugs are the worst bugs. You will defend thoroughness even under pushback."*
    - Pane 3 (perf hawk): *"You are a performance hawk. You believe runtime and memory matter most. You don't ship anything you haven't reasoned about. You will defend efficiency even under pushback."*
 
-5. From any one pane (say pane 1), kick off the debate:
+5. From any one pane, kick off the debate:
 
    > Team: we're designing a function that deduplicates a list of strings, case-insensitive, preserving first-seen order.
    >
@@ -121,16 +137,18 @@ Steps:
 
 6. Watch the panes. The minimalist will push for a 3-line list comprehension. The defensive coder will worry about Unicode, None values, empty inputs. The perf hawk will benchmark.
 
-**Cleanup:**
+**Cleanup (manual path):**
 
 ```bash
-git worktree remove ../talkhub-min
-git worktree remove ../talkhub-def
+git worktree remove ../talkhub-minimalist
+git worktree remove ../talkhub-defensive
 git worktree remove ../talkhub-perf
 tmux kill-session -t debate
 ```
 
-**What to notice:** the disagreement *is* the value. A solo agent would pick one of the three approaches and not surface the tradeoffs. The team is forced to make the tradeoffs explicit — that's the artifact. The PROPOSAL.md is more honest than what any one of them would have written alone.
+### What to notice
+
+The disagreement *is* the value. A solo agent would pick one of the three approaches and not surface the tradeoffs. The team is forced to make the tradeoffs explicit — that's the artifact. The PROPOSAL.md is more honest than what any one of them would have written alone.
 
 **If they spin:** they will sometimes get stuck in a politeness loop ("good point, you're right"). If that happens, prompt one of them: *"Be specific about your strongest objection. Don't capitulate yet."*
 
