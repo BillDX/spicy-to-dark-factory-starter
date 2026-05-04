@@ -34,7 +34,12 @@ PROMPT_DEF="You are the Defensive Coder on a 3-agent debate team. Your role: def
 PROMPT_PERF="You are the Performance Hawk on a 3-agent debate team. Your role: defend runtime cost, memory, and big-O analysis. Don't ship code you haven't reasoned about. When the human posts the design problem, write your version in this worktree, read the others', and argue from data and complexity — do not capitulate without evidence. Acknowledge the role in one sentence and wait for the problem."
 PROMPTS=("$PROMPT_MIN" "$PROMPT_DEF" "$PROMPT_PERF")
 
-KICKOFF_PROMPT='Team: we'\''re designing a function that deduplicates a list of strings, case-insensitive, preserving first-seen order. Each of you, propose your version in your worktree. Read the others'\'' proposals. Argue. You may write a counter-version in your own worktree if it makes the point. Converge on PROPOSAL.md: the version you all signed off on (or noted disagreement on), with a one-paragraph rationale and the tradeoffs you weighed.'
+KICKOFF_PROMPT="DEBATE BEGINS. Implement dedupe(items: list[str]) -> list[str] that removes case-insensitive duplicates and preserves first-seen order. (1) Write your version as IMPL.py in your current worktree, with comments explaining your role's design choices. (2) Read the others' versions at ../talkhub-minimalist/IMPL.py, ../talkhub-defensive/IMPL.py, ../talkhub-perf/IMPL.py (skip your own). (3) Write CRITIQUE.md in your worktree — your sharpest, most specific objections to each of the others' choices. (4) If you are the Minimalist, after your CRITIQUE.md, write PROPOSAL.md in your worktree synthesizing the team's final recommendation including dissent where present. Otherwise, after writing your CRITIQUE.md, watch for ../talkhub-minimalist/PROPOSAL.md and append one paragraph of agreement or dissent to it. Begin step 1 now."
+
+# How long to wait for personas to acknowledge their roles before firing the
+# kickoff. The personas are instructed to ack in one sentence; ~20s is plenty
+# on most machines. Override with DEMO3_PERSONA_WAIT=NN ./scripts/demo3-debate.sh.
+PERSONA_WAIT_SECS="${DEMO3_PERSONA_WAIT:-20}"
 
 usage() {
   sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
@@ -145,13 +150,12 @@ cat <<EOF
     bottom-left — defensive
     bottom-right — perf hawk
 
-  Wait until each agent acknowledges its role (one sentence each),
-  then click into ANY pane and paste this kickoff prompt to start
-  the debate:
-
-───────────────────────────────────────────────────────────────────
-$KICKOFF_PROMPT
-───────────────────────────────────────────────────────────────────
+  Plan:
+    1. The personas acknowledge their roles (one sentence each).
+    2. After ${PERSONA_WAIT_SECS}s, the kickoff prompt fires
+       automatically in all three panes — the debate begins.
+    3. You'll be attached so you can watch them write IMPL.py,
+       read each other, and produce CRITIQUE.md + PROPOSAL.md.
 
   tmux (mouse mode is on — click a pane to focus it):
     Click pane    focus it
@@ -163,8 +167,21 @@ $KICKOFF_PROMPT
   Tear down (when done):
     $0 --cleanup
 
-Attaching to tmux in 3 seconds...
 EOF
 
-sleep 3
+# ─── wait for personas to ack, then fire the kickoff ──────────────────
+echo "Waiting ${PERSONA_WAIT_SECS}s for personas to acknowledge..."
+sleep "$PERSONA_WAIT_SECS"
+
+echo "Firing kickoff to all three panes..."
+for i in 0 1 2; do
+  # -l sends literal text (no key-name interpretation), then a separate
+  # Enter keystroke submits. Single-line kickoff so embedded newlines
+  # can't accidentally split the message.
+  tmux send-keys -t "$SESSION":0.$i -l "$KICKOFF_PROMPT"
+  tmux send-keys -t "$SESSION":0.$i Enter
+done
+
+echo "Kickoff fired. Attaching to tmux..."
+sleep 1
 tmux attach -t "$SESSION"

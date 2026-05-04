@@ -89,7 +89,22 @@ The exercise: three agents with different architectural priors debate a tiny des
 ./scripts/demo3-debate.sh
 ```
 
-Creates three worktrees on dedicated branches, opens a tmux session named `debate` with three panes, launches Claude in each, and pre-loads each pane with its persona. When tmux attaches, wait for the three agents to acknowledge their roles, then paste the kickoff prompt printed by the script into any pane.
+Creates three worktrees on dedicated branches, opens a tmux session named `debate` with three panes, launches Claude in each pane with its persona as the initial message, waits for the personas to acknowledge their roles (~20 seconds), and then **auto-fires the kickoff prompt to all three panes** to start the debate. tmux mouse mode is on, so you can click between panes.
+
+The kickoff prompt has each agent:
+
+1. Write `IMPL.py` in their worktree (their proposed implementation, with comments).
+2. Read the others' `IMPL.py` files.
+3. Write `CRITIQUE.md` with their sharpest objections.
+4. The Minimalist writes `PROPOSAL.md` synthesizing the team's recommendation; the others append agreement or dissent.
+
+You attach automatically once the kickoff fires. Watch the agents work in their respective worktrees.
+
+Override the wait time if your machine is slower:
+
+```bash
+DEMO3_PERSONA_WAIT=30 ./scripts/demo3-debate.sh
+```
 
 When you're done:
 
