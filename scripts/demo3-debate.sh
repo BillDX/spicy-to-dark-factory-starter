@@ -131,11 +131,21 @@ done
 # ─── launch Claude in each pane WITH the persona as the initial message ──
 # Passing the prompt as a CLI argument means Claude opens with the persona
 # already submitted as the first user message — no manual Enter needed.
+#
+# --dangerously-skip-permissions is justified here because this is a textbook
+# "OK to use" case from the workshop slides:
+#   • Each agent runs in a throwaway debate-* worktree, not a real branch.
+#   • The agents need to read SIBLING worktrees (outside their own root) —
+#     normally a permission prompt every time, which kills the demo flow.
+#   • The project's .claude/settings.json keeps deny rules for the genuinely
+#     destructive ops (rm -rf, force push, .env writes).
+#   • The user is watching live in tmux.
+# If you adapt this script for non-demo work, drop the flag.
 for i in 0 1 2; do
   # printf %q produces a shell-safe single-line quoted form (handles apostrophes,
   # em-dashes, etc. without breaking on shell metacharacters).
   quoted_prompt=$(printf %q "${PROMPTS[$i]}")
-  tmux send-keys -t "$SESSION":0.$i "claude $quoted_prompt" Enter
+  tmux send-keys -t "$SESSION":0.$i "claude --dangerously-skip-permissions $quoted_prompt" Enter
 done
 
 # ─── instructions for the user ────────────────────────────────────────
@@ -156,6 +166,11 @@ cat <<EOF
        automatically in all three panes — the debate begins.
     3. You'll be attached so you can watch them write IMPL.py,
        read each other, and produce CRITIQUE.md + PROPOSAL.md.
+
+  Note: each agent is launched with --dangerously-skip-permissions
+  so they don't interrupt the debate to ask for permission to read
+  sibling worktrees. Throwaway branches + deny rules in settings.json
+  + you watching = textbook safe use of the flag.
 
   tmux (mouse mode is on — click a pane to focus it):
     Click pane    focus it

@@ -91,6 +91,8 @@ The exercise: three agents with different architectural priors debate a tiny des
 
 Creates three worktrees on dedicated branches, opens a tmux session named `debate` with three panes, launches Claude in each pane with its persona as the initial message, waits for the personas to acknowledge their roles (~20 seconds), and then **auto-fires the kickoff prompt to all three panes** to start the debate. tmux mouse mode is on, so you can click between panes.
 
+Each Claude session is launched with `--dangerously-skip-permissions` because the agents need to read sibling worktrees (outside their own root), which would otherwise prompt every single time and kill the demo flow. This is the textbook "OK to use" case from the workshop slides: throwaway `debate-*` branches, deny rules in `.claude/settings.json` for the destructive operations, and you watching live.
+
 The kickoff prompt has each agent:
 
 1. Write `IMPL.py` in their worktree (their proposed implementation, with comments).
