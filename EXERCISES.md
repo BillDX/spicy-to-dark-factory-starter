@@ -75,13 +75,13 @@ Steps:
 
 ---
 
-## Exercise 3 — The Architecture Debate (agent teams in tmux)
+## Exercise 3 — The Architecture Debate (a team-shaped exercise)
 
 **Goal:** experience what makes agent teams *different* from sub-agents — agents with sharp, opposing roles who push back on each other and have to converge.
 
-This one is **experimental**. It can break. That's the point.
-
 The exercise: three agents with different architectural priors debate a tiny design problem and have to produce a single recommendation.
+
+> **Honest disclosure.** This is a *team-shaped exercise*, not a true Claude Code agent team. What you'll see is three independent `claude` sessions coordinating through the **filesystem** — each writes to its own worktree and reads the others'. Real Claude Code agent teams (the experimental feature) add native peer messaging on top: an agent can `@-mention` a teammate, who receives the message in their conversation rather than as a file. Same pattern (sharp roles + structured disagreement + converged artifact); different plumbing. We chose filesystem coordination here because it's deterministic, version-stable, and produces visible artifacts you can `cat` mid-debate — which matters more for a workshop than purity does.
 
 ### The fast path (one command)
 
