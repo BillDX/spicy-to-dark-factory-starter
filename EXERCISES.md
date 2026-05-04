@@ -75,52 +75,64 @@ Steps:
 
 ---
 
-## Exercise 3 — Agent teams in tmux
+## Exercise 3 — The Architecture Debate (agent teams in tmux)
 
-**Goal:** see peer-to-peer agent coordination — agents messaging each other directly, not just back through a parent.
+**Goal:** experience what makes agent teams *different* from sub-agents — agents with sharp, opposing roles who push back on each other and have to converge.
 
 This one is **experimental**. It can break. That's the point.
+
+The exercise: three agents with different architectural priors debate a tiny design problem and have to produce a single recommendation.
 
 Steps:
 
 1. From a fresh terminal:
 
    ```bash
-   tmux new -s team
+   tmux new -s debate
    ```
 
 2. Split into three panes (`Ctrl-b %` then `Ctrl-b "`).
 3. In each pane, create a worktree and start Claude there:
 
    ```bash
-   # pane 1 — lead
-   git worktree add ../talkhub-lead lead && cd ../talkhub-lead && claude
+   # pane 1 — minimalist
+   git worktree add ../talkhub-min minimalist && cd ../talkhub-min && claude
 
-   # pane 2 — coder
-   git worktree add ../talkhub-coder coder && cd ../talkhub-coder && claude
+   # pane 2 — defensive coder
+   git worktree add ../talkhub-def defensive && cd ../talkhub-def && claude
 
-   # pane 3 — tester
-   git worktree add ../talkhub-tester tester && cd ../talkhub-tester && claude
+   # pane 3 — performance hawk
+   git worktree add ../talkhub-perf perf && cd ../talkhub-perf && claude
    ```
 
-4. In the lead pane, give a task that requires negotiation, e.g.:
+4. In each pane, set the persona before starting the debate:
 
-   > Coordinate with the coder and tester teammates to add a `DELETE /talks/{id}` endpoint.
-   > The tester should write the tests first; the coder implements to satisfy them.
-   > You decide the API shape.
+   - Pane 1 (minimalist): *"You are a minimalist coder. You believe the simplest correct implementation always wins. Lines of code are a cost. You will defend simplicity even under pushback."*
+   - Pane 2 (defensive): *"You are a defensive coder. You believe handling every edge case up front is always right. Silent bugs are the worst bugs. You will defend thoroughness even under pushback."*
+   - Pane 3 (perf hawk): *"You are a performance hawk. You believe runtime and memory matter most. You don't ship anything you haven't reasoned about. You will defend efficiency even under pushback."*
 
-5. Watch the panes. Agents should @-mention each other and respond directly.
+5. From any one pane (say pane 1), kick off the debate:
+
+   > Team: we're designing a function that deduplicates a list of strings, case-insensitive, preserving first-seen order.
+   >
+   > Each of you, propose your version in your worktree. Read the others' proposals. Argue. You may write a counter-version in your own worktree if it makes the point.
+   >
+   > Converge on PROPOSAL.md: the version you all signed off on (or noted disagreement on), with a one-paragraph rationale and the tradeoffs you weighed.
+
+6. Watch the panes. The minimalist will push for a 3-line list comprehension. The defensive coder will worry about Unicode, None values, empty inputs. The perf hawk will benchmark.
 
 **Cleanup:**
 
 ```bash
-git worktree remove ../talkhub-lead
-git worktree remove ../talkhub-coder
-git worktree remove ../talkhub-tester
-tmux kill-session -t team
+git worktree remove ../talkhub-min
+git worktree remove ../talkhub-def
+git worktree remove ../talkhub-perf
+tmux kill-session -t debate
 ```
 
-**What to notice:** the conversation is the artifact. There's no controller telling them what to do — they negotiate. This is also where it's easy to get stuck in a loop. If they spin, kill the session and start over with a tighter prompt.
+**What to notice:** the disagreement *is* the value. A solo agent would pick one of the three approaches and not surface the tradeoffs. The team is forced to make the tradeoffs explicit — that's the artifact. The PROPOSAL.md is more honest than what any one of them would have written alone.
+
+**If they spin:** they will sometimes get stuck in a politeness loop ("good point, you're right"). If that happens, prompt one of them: *"Be specific about your strongest objection. Don't capitulate yet."*
 
 ---
 
