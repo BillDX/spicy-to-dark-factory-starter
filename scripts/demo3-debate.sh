@@ -26,11 +26,12 @@ WT_PARENT="$(dirname "$REPO_ROOT")"
 # Persona slugs match worktree dir suffix (../talkhub-<slug>) and branch name (debate-<slug>).
 PERSONAS=("minimalist" "defensive" "perf")
 
-# Single-line persona prompts. Kept on one line so tmux send-keys delivers them
-# as a single user message (newlines would be sent as Enter and break the message).
-PROMPT_MIN="You are the Minimalist on a 3-agent debate team. Your role: defend the simplest correct implementation. Lines of code are a cost. When the human posts the design problem in another pane, write your version in this worktree, read the others' proposals, and argue specifically and respectfully — but do not capitulate to politeness. Acknowledge the role and wait for the problem."
-PROMPT_DEF="You are the Defensive Coder on a 3-agent debate team. Your role: defend handling edge cases, input validation, and explicit error paths. Silent bugs are the worst bugs. When the human posts the design problem, write your version in this worktree, read the others', and argue your case from concrete failure modes — do not concede just to be agreeable. Acknowledge the role and wait for the problem."
-PROMPT_PERF="You are the Performance Hawk on a 3-agent debate team. Your role: defend runtime cost, memory, and big-O analysis. Don't ship code you haven't reasoned about. When the human posts the design problem, write your version in this worktree, read the others', and argue from data and complexity — do not capitulate without evidence. Acknowledge the role and wait for the problem."
+# Persona prompts — passed to claude as the initial user message via CLI arg
+# so they actually fire on launch (the TUI's Enter inserts a newline; submit
+# requires CLI invocation or a UI keystroke we can't reliably automate).
+PROMPT_MIN="You are the Minimalist on a 3-agent debate team. Your role: defend the simplest correct implementation. Lines of code are a cost. When the human posts the design problem in another pane, write your version in this worktree, read the others' proposals, and argue specifically and respectfully — but do not capitulate to politeness. Acknowledge the role in one sentence and wait for the problem."
+PROMPT_DEF="You are the Defensive Coder on a 3-agent debate team. Your role: defend handling edge cases, input validation, and explicit error paths. Silent bugs are the worst bugs. When the human posts the design problem, write your version in this worktree, read the others', and argue your case from concrete failure modes — do not concede just to be agreeable. Acknowledge the role in one sentence and wait for the problem."
+PROMPT_PERF="You are the Performance Hawk on a 3-agent debate team. Your role: defend runtime cost, memory, and big-O analysis. Don't ship code you haven't reasoned about. When the human posts the design problem, write your version in this worktree, read the others', and argue from data and complexity — do not capitulate without evidence. Acknowledge the role in one sentence and wait for the problem."
 PROMPTS=("$PROMPT_MIN" "$PROMPT_DEF" "$PROMPT_PERF")
 
 KICKOFF_PROMPT='Team: we'\''re designing a function that deduplicates a list of strings, case-insensitive, preserving first-seen order. Each of you, propose your version in your worktree. Read the others'\'' proposals. Argue. You may write a counter-version in your own worktree if it makes the point. Converge on PROPOSAL.md: the version you all signed off on (or noted disagreement on), with a one-paragraph rationale and the tradeoffs you weighed.'
@@ -111,6 +112,10 @@ tmux split-window  -v -t "$SESSION":0.0   -c "$WT_PARENT/talkhub-${PERSONAS[1]}"
 tmux split-window  -h -t "$SESSION":0.1   -c "$WT_PARENT/talkhub-${PERSONAS[2]}"
 tmux select-layout -t "$SESSION" main-horizontal >/dev/null
 
+# Mouse mode: click a pane to focus it, scroll to enter copy mode.
+# This is the iTerm-friendly fix — Ctrl-b ←/→ also works, but click is friendlier.
+tmux set-option -t "$SESSION" mouse on >/dev/null
+
 # Pane titles (visible at the top of each pane)
 tmux set-option -t "$SESSION" pane-border-status top   >/dev/null
 tmux set-option -t "$SESSION" pane-border-format " #{pane_title} " >/dev/null
@@ -118,17 +123,14 @@ for i in 0 1 2; do
   tmux select-pane -t "$SESSION":0.$i -T " ${PERSONAS[$i]} "
 done
 
-# ─── launch Claude in each pane ───────────────────────────────────────
+# ─── launch Claude in each pane WITH the persona as the initial message ──
+# Passing the prompt as a CLI argument means Claude opens with the persona
+# already submitted as the first user message — no manual Enter needed.
 for i in 0 1 2; do
-  tmux send-keys -t "$SESSION":0.$i "claude" Enter
-done
-
-echo "Waiting for Claude to initialize (5s)..."
-sleep 5
-
-# ─── deliver each persona prompt as a single message ──────────────────
-for i in 0 1 2; do
-  tmux send-keys -t "$SESSION":0.$i "${PROMPTS[$i]}" Enter
+  # printf %q produces a shell-safe single-line quoted form (handles apostrophes,
+  # em-dashes, etc. without breaking on shell metacharacters).
+  quoted_prompt=$(printf %q "${PROMPTS[$i]}")
+  tmux send-keys -t "$SESSION":0.$i "claude $quoted_prompt" Enter
 done
 
 # ─── instructions for the user ────────────────────────────────────────
@@ -143,18 +145,20 @@ cat <<EOF
     bottom-left — defensive
     bottom-right — perf hawk
 
-  Wait until each agent acknowledges its role, then switch to ANY
-  pane and paste this kickoff prompt to start the debate:
+  Wait until each agent acknowledges its role (one sentence each),
+  then click into ANY pane and paste this kickoff prompt to start
+  the debate:
 
 ───────────────────────────────────────────────────────────────────
 $KICKOFF_PROMPT
 ───────────────────────────────────────────────────────────────────
 
-  tmux:
-    Switch panes  Ctrl-b ←/→/↑/↓
-    Zoom one pane Ctrl-b z
-    Detach        Ctrl-b d
-    Reattach      tmux attach -t $SESSION
+  tmux (mouse mode is on — click a pane to focus it):
+    Click pane    focus it
+    Ctrl-b ←/→/↑/↓   keyboard pane switch
+    Ctrl-b z      zoom one pane / unzoom
+    Ctrl-b d      detach
+    tmux attach -t $SESSION   reattach
 
   Tear down (when done):
     $0 --cleanup
